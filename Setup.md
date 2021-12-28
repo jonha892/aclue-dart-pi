@@ -23,9 +23,6 @@ start_x=1
 `````
 
 - Ports freigeben
-  - https://serverfault.com/questions/416727/ufw-blocking-apt-and-dns
-  - https://serverfault.com/questions/468907/ufw-blocking-apt
-
 
 ```
 sudo apt-get install ufw
@@ -34,4 +31,3 @@ sudo ufw reset
 sudo ufw limit ssh
 sudo ufw enable
 ```
-
