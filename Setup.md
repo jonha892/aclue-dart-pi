@@ -62,3 +62,6 @@ sudo ufw logging on
 sudo ufw enable
 
 ```
+
+- Sync
+`rsync -av --delete /mnt/h/dev/aclue-dart-pi/src/ <usernamr>@raspberrypi:~/dev/aclue-dart-pi/src/`
