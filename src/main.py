@@ -6,6 +6,7 @@ from fastapi import FastAPI, Response
 
 
 camera = PiCamera()
+camera.resolution = (1920,1080)
 camera.start_preview()
 sleep(2)
 app = FastAPI()
