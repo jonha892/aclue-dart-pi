@@ -18,6 +18,7 @@ if platform.machine() == "armv7l":
 
     from picamera import PiCamera
     camera = PiCamera()
+    camera.resolution = (1024,720)
     camera.start_preview()
     sleep(2)
 
