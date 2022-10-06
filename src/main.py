@@ -37,32 +37,9 @@ if platform.machine() == "armv7l":
     @app.put("led-red")
     async def led_green():
         pass
-
-class ThrowRequest(BaseModel):
-    series_id: str
-    throw_id: str
-    img_str: str
-    dart: str
+else:
+    print("WARN: PI not detected. API is limited!")
 
 @app.get("/")
 async def root():
     return {"message": "Hello World"}
-
-
-@app.post("/throw")
-async def throw(throw: ThrowRequest):
-    save_path = os.path.join(DATA_PATH, throw.series_id, f"{throw.throw_id}.png")
-    with open(save_path, 'wb') as f:
-        f.write(base64.urlsafe_b64decode(throw.img_str))
-
-    
-
-    return {"message": "success"}
-
-@app.get("/label/{throw_id}")
-async def get_label():
-    pass
-
-@app.post("/label/{throw_id}")
-async def update_label():
-    pass
