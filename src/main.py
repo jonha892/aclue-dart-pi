@@ -7,9 +7,6 @@ import os
 from turtle import width
 
 from fastapi import FastAPI, Response
-from pydantic import BaseModel
-
-DATA_PATH = "../data"
 
 app = FastAPI()
 
