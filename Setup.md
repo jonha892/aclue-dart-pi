@@ -63,5 +63,9 @@ sudo ufw enable
 
 ```
 
+- 28.10.22
+  Nutzen vom RaspberryPi imager. Einrichten von ssh (user "pi" password "ip"). Konfigurieren vom wlan.
+  
+
 - Sync
 `rsync -av --delete /mnt/h/dev/aclue-dart-pi/src/ <usernamr>@raspberrypi:~/dev/aclue-dart-pi/src/`

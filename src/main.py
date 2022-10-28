@@ -4,7 +4,6 @@ import platform
 from pprint import pprint
 import base64
 import os
-from turtle import width
 
 from fastapi import FastAPI, Response
 
