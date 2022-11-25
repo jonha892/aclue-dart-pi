@@ -4,6 +4,7 @@ import platform
 from pprint import pprint
 import base64
 import os
+import json
 
 from fastapi import FastAPI, Response
 
@@ -25,7 +26,7 @@ if platform.machine() == "armv7l":
     camera.start_preview()
     sleep(2)
 
-    @app.get("/image")
+    @app.get("/api/image")
     async def take_image():
         img_byte_stream = BytesIO()
         camera.capture(img_byte_stream, "png")
@@ -34,14 +35,14 @@ if platform.machine() == "armv7l":
             content=img_byte_stream.getvalue(), media_type="image/png", headers=headers
         )
 
-    @app.get("/resolution")
+    @app.get("/api/resolution")
     async def resolution():
         content = {
             "width": width,
             "height": height,
         }
 
-        return Response(content=content, headers=headers)
+        return Response(content= json.dumps(content), headers=headers)
 
     @app.put("led-green")
     async def led_green():

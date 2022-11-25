@@ -1,71 +1,89 @@
-## Setup
+# Setup
 
-- Add new sudo user
-```
-useradd <username>
-passwd <username>
-usermod -aG sudo <username>
-```
+1. SD Karte mit Raspberry PI imager aufsetzen https://www.raspberrypi.com/software/
+  In den Einstellungen
+     - Netzwerknamen setzen
+     - WLAN einrichten
+     - Passwort setzen
+     - SSH mit username & passwort erlauben
+2. Mit dem Pi verbinden & updaten. Firemware update kann ein wenig dauern
+    ```
+    ssh pi@raspberrypi
+    sudo apt update
+    sudo rpi-update
+    ```
+3. Reboot
+   ```
+   sudo reboot
+   ```
+4. Enable legacy camera
+    ```
+    sudo raspi-config
+    => Interface Options => Legacy Camera => Yes => Finish => reboot
+    ```
+5. Boot config anpassen. Teilwise sind die Werte schon gesetzt
+   ```
+   sudo nano /boot/config
 
-- Raspberry OS`aktuallisieren
+   gpu_mem=192
+   start_x=1
 
-```
-sudo apt-get update
-sudo apt-get upgrade
-```
+   dtoverlay=vc4-fkms-v3d
+   #dtoverlay=imx219 (dieses overlay funktioniert mit der legacy camera nicht)
+   ```
+6. Camera testen
+   ```
+   raspistill -o test.jpt
+   ```
+   `libcamera-hello` funktioniert mit der legacy camera nicht.
+7. Firewall configurieren. (Damit der Python server über das lokale Netzwerk erreichbar ist)
+   ```
+   sudo apt install ufw
+   sudo ufw default deny incoming
+   sudo ufw default deny outgoing
+   sudo ufw allow ssh
+   sudo ufw allow git
+   sudo ufw allow out http
+   sudo ufw allow in http 
+   sudo ufw allow out https
+   sudo ufw allow in https
+   sudo ufw allow 53
+   sudo ufw allow out 53
+   sudo ufw allow 123
+   sudo ufw allow dns
+   sudo ufw allow 8000
+   sudo ufw logging on
 
-- Kamera Modul aktivieren
-
-`sudo raspi-config` => Interfacing
-
-- /boot/config anpassen
-
-`````
-sudo nano /boot/config
-// Dann folgendes anpassen/anfügen
-[all]
-gpu_mem=192
-// ggf. auch:
-start_x=1
-`````
-
-  `libcamera-hello`
-
-- Ports freigeben
-
-```
-sudo apt-get install ufw
-sudo ufw disable
-sudo ufw reset
-sudo ufw limit ssh
-sudo ufw enable
-```
-
-
-```
-sudo ufw default deny incoming
-sudo ufw default deny outgoing
-sudo ufw allow ssh
-sudo ufw allow git
-sudo ufw allow out http
-sudo ufw allow in http 
-sudo ufw allow out https
-sudo ufw allow in https
-sudo ufw allow 53
-sudo ufw allow 123
-sudo ufw allow dns
-
-sudo ufw allow 8000
-
-sudo ufw logging on
-
-sudo ufw enable
-
-```
-
-- 28.10.22
-  Nutzen vom RaspberryPi imager. Einrichten von ssh (user "pi" password "ip"). Konfigurieren vom wlan.
-  
-
-- Sync
-`rsync -av --delete /mnt/h/dev/aclue-dart-pi/src/ <usernamr>@raspberrypi:~/dev/aclue-dart-pi/src/`
+   sudo ufw enable
+   ```
+8. Python version prüfen
+   ```
+   python --version
+   ```
+9. Repo code auf den PI kopieren
+   ```
+   (auf dem PI)
+   mkdir ~/dev
+   mkdir ~/dev/aclue-dart-pi
+   (auf dem Host)
+   scp -r ~/Dev/aclue-dart-pi/ pi@raspberrypi:~/dev
+   sudo rm -r ~/dev/aclue-dart-pi/.git
+   ```
+11. Python venv aufsetzen & dependencies
+    TODO requirement.txt
+    ```
+    python -m venv env
+    source env/bin/activate
+    pip install picamera
+    pip install "fastapi[all]"
+    ```
+12. Anwendung starten
+    ```
+    source env/bin/activate
+    cd src
+    uvicorn main:app --reload --port=8000 --host=0.0.0.0
+    ```
+13. Änderungen von Host auf PI pushen
+    ```
+    rsync -av --delete ~/Dev/aclue-dart-pi/src/ pi@raspberrypi:~/dev/aclue-dart-pi/src/
+    ``` 
