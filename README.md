@@ -67,3 +67,13 @@ uvicorn main:app --reload --host=0.0.0.0
 Get Image time:
 curl -o /dev/null -s -w 'Total: %{time_total}s\n' http://raspberrypi:8000/api/imagev2
 ```
+
+# Image capturing
+
+Gibt verschiedene Möglichkeiten:
+1) numpy array -> PIL -> BytesIO buffer
+2) numpy array -> imageio -> BytesIO buffer
+3) numpy array -> pypng.Writer -> BytesIO buffer
+
+Auf einem MacBook Pro dauert es je 1.5s, 5s, 90ms.
+PyPng ist also deutlich schneller. Auf dem RaspberryPi haben wir dadurch die Aufnahmezeit von ~3s auf 400ms-1300ms (720p vs 1080p) reduziert.
