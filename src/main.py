@@ -107,7 +107,7 @@ async def resolution():
 
 @app.get("/api/imagev2")
 async def take_image_v2():
-    cap = cv.VideoCapture(1)
+    cap = cv.VideoCapture(0)
     cap.set(3, width)
     cap.set(4, height)
     cap.set(5, 30)
