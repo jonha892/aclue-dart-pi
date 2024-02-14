@@ -4,7 +4,6 @@ from time import sleep
 import platform
 import json
 import logging, logging.config
-import time
 
 import cv2 as cv
 import numpy as np
@@ -62,7 +61,7 @@ camera = None
 width = 1920
 height = 1080
 channels = 3
-
+cap = cv.VideoCapture(0)
 
 headers = {"Access-Control-Allow-Origin": "*"}
 
@@ -105,9 +104,7 @@ async def resolution():
 
     return Response(content= json.dumps(content), headers=headers)
 
-@app.get("/api/imagev2")
-async def take_image_v2():
-    cap = cv.VideoCapture(0)
+def take_image():
     cap.set(3, width)
     cap.set(4, height)
     cap.set(5, 30)
@@ -133,6 +130,12 @@ async def take_image_v2():
     flat_arr = arr.reshape(height, -1)
     logger.info(f'flat_arr shape: {flat_arr.shape}, flat_arr type: {flat_arr.dtype}')
 
+    return flat_arr
+
+@app.get("/api/imagev2")
+async def take_image_v2():
+    flat_arr = take_image()
+
     # Save the flattened array as a PNG byte buffer
     with io.BytesIO() as output:
         writer = png.Writer(width=width, height=height, bitdepth=8, planes=channels, greyscale=False)
@@ -143,6 +146,64 @@ async def take_image_v2():
 
     return Response(
             content=png_bytes, media_type="image/png", headers=headers
+        )
+
+import load
+import infer
+import torch
+from ultralytics import YOLO
+from torchvision.transforms import v2
+
+transforms = v2.Compose([
+    v2.Resize((640, 640)),
+    v2.PILToTensor()
+])
+model = YOLO("../data/best.pt")
+
+pi_img_width, pi_img_height = 1920, 1080
+yolo_img_width, yolo_img_height = 640, 640
+yolo_size = yolo_img_width, yolo_img_height
+
+crop_window = 450, 350, 1440, 1080
+orig_size = crop_window[2] - crop_window[0], crop_window[3] - crop_window[1]
+
+@app.get("api/prediction")
+async def prediction():
+
+    img_arr = take_image()
+    img_tensor = torch.tensor(img_arr, dtype=torch.float32)
+    img_tensor = transforms(img_tensor)
+    img_tensor = img_tensor / 255.0
+    img_tensor = img_tensor.unsqueeze(0)
+
+    result = model(img_tensor)
+    predictions = result.boxes.numpy().data.tolist()
+
+    resized_predictions = load.translate_yolo_to_crop(predictions, orig_size=orig_size, yolo_size=yolo_size)
+
+    anchor_candidates = infer.filter(resized_predictions, class_id=infer.CLASS_ANCHOR)
+    anchor_candidates = infer.to_coordinates(anchor_candidates)
+    homography_matrix = infer.build_homography_matrix_2(anchor_candidates)
+
+    anchors = []
+    for candidate in anchor_candidates:
+        anchor = infer.translate_position(candidate, homography_matrix)
+        print('anchor', anchor)
+        anchors.append(anchor)
+
+    darts = infer.filter(resized_predictions, class_id=infer.CLASS_DART)
+    darts = infer.to_coordinates(darts)
+    result = []
+
+    for dart in darts:
+        x, y = dart
+
+        dart_pos = infer.translate_position((x, y), homography_matrix)
+        score = infer.build_score_prediction(dart_pos)
+        result.append((score, dart_pos))
+
+    return Response(
+            content=json.dumps(result), media_type="application/json", headers=headers
         )
 
 @app.get("/")
