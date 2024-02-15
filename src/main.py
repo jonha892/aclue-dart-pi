@@ -67,7 +67,7 @@ headers = {"Access-Control-Allow-Origin": "*"}
 
 with_pi_camera = False
 if platform.machine() == "armv7l" and with_pi_camera:
-    print("RaspberryPi detected, setting up PI specific paths")
+    logger.info("RaspberryPi detected, setting up PI specific paths")
 
     from picamera import PiCamera
 
@@ -110,7 +110,7 @@ def take_image():
     cap.set(5, 30)
 
     if not cap.isOpened():
-        print("Cannot open camera")
+        logger.info("Cannot open camera")
         exit()
 
     logger.info("take_image_v2")
@@ -167,17 +167,22 @@ yolo_size = yolo_img_width, yolo_img_height
 crop_window = 450, 350, 1440, 1080
 orig_size = crop_window[2] - crop_window[0], crop_window[3] - crop_window[1]
 
-@app.get("api/prediction")
+@app.get("/api/prediction")
 async def prediction():
 
-    img_arr = take_image()
-    img_tensor = torch.tensor(img_arr, dtype=torch.float32)
+    #img_tensor = take_image()
+    # random tensor in the shape of the cropped image
+    img_tensor = torch.rand((3, crop_window[2] - crop_window[0], crop_window[3] - crop_window[1]), dtype=torch.float32)
+    
+    logger.info(f'img_tensor shape: {img_tensor.shape}')
     img_tensor = transforms(img_tensor)
+    logger.info(f'after transform img_tensor shape: {img_tensor.shape}')
     img_tensor = img_tensor / 255.0
     img_tensor = img_tensor.unsqueeze(0)
 
     result = model(img_tensor)
-    predictions = result.boxes.numpy().data.tolist()
+    logger.info(f'result len {len(result)}')
+    predictions = { 'boxes': result[0].boxes.numpy().data.tolist() }
 
     resized_predictions = load.translate_yolo_to_crop(predictions, orig_size=orig_size, yolo_size=yolo_size)
 
@@ -188,7 +193,7 @@ async def prediction():
     anchors = []
     for candidate in anchor_candidates:
         anchor = infer.translate_position(candidate, homography_matrix)
-        print('anchor', anchor)
+        logger.info('anchor', anchor)
         anchors.append(anchor)
 
     darts = infer.filter(resized_predictions, class_id=infer.CLASS_DART)

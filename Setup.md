@@ -16,29 +16,32 @@
    ```
    sudo reboot
    ```
-4. Enable legacy camera
+4. Enable legacy camera (skip falls wir webcam benutzen)
+
    ```
    sudo raspi-config
    => Interface Options => Legacy Camera => Yes => Finish => reboot
    ```
-5. Boot config anpassen. Teilwise sind die Werte schon gesetzt
 
-   ```
-   sudo nano /boot/config
+   1. Boot config anpassen. Teilwise sind die Werte schon gesetzt
 
-   gpu_mem=192
-   start_x=1
+      ```
+      sudo nano /boot/config
 
-   dtoverlay=vc4-fkms-v3d
-   #dtoverlay=imx219 (dieses overlay funktioniert mit der legacy camera nicht)
-   ```
+      gpu_mem=192
+      start_x=1
 
-6. Camera testen
-   ```
-   raspistill -o test.jpt
-   ```
-   `libcamera-hello` funktioniert mit der legacy camera nicht.
-7. Firewall configurieren. (Damit der Python server über das lokale Netzwerk erreichbar ist)
+      dtoverlay=vc4-fkms-v3d
+      #dtoverlay=imx219 (dieses overlay funktioniert mit der legacy camera nicht)
+      ```
+
+   2. Camera testen
+      ```
+      raspistill -o test.jpt
+      ```
+      `libcamera-hello` funktioniert mit der legacy camera nicht.
+
+5. Firewall configurieren. (Damit der Python server über das lokale Netzwerk erreichbar ist)
 
    ```
    sudo apt install ufw
@@ -60,41 +63,34 @@
    sudo ufw enable
    ```
 
-8. Python version prüfen
+6. Python version prüfen
    ```
    python --version
    ```
-9. Repo code auf den PI kopieren
+7. Repo code auf den PI kopieren
+
    ```
    (auf dem PI)
    mkdir ~/dev
    mkdir ~/dev/aclue-dart-pi
    (auf dem Host)
-   scp -r ~/Dev/aclue-dart-pi/ pi@raspberrypi:~/dev
-   sudo rm -r ~/dev/aclue-dart-pi/.git
+   rsync -avz --exclude 'env' --exclude '.git' . pi@raspberrypi:~/develop/aclue-dart-pi
    ```
-10. Alternativ
 
-```
-scp -r ~/Dev/aclue-dart-pi/src pi@raspberrypi:~/dev/aclue-dart-pi/src
-scp -r ~/Dev/aclue-dart-pi/data pi@raspberrypi:~/dev/aclue-dart-pi/data
-scp -r ~/Dev/aclue-dart-pi/requirements.txt pi@raspberrypi:~/dev/aclue-dart-pi/requirements.txt
-```
-
-1.  Python venv aufsetzen & dependencies
-    ```
-    python -m venv env
-    source env/bin/activate
-    pip install picamera
-    pip install "fastapi[all]"
-    ```
-2.  Anwendung starten
-    ```
-    source env/bin/activate
-    cd src
-    uvicorn main:app --reload --port=8000 --host=0.0.0.0
-    ```
-3.  Änderungen von Host auf PI pushen
+8. Python venv aufsetzen & dependencies
+   ```
+   python -m venv env
+   source env/bin/activate
+   pip install picamera
+   pip install "fastapi[all]"
+   ```
+9. Anwendung starten
+   ```
+   source env/bin/activate
+   cd src
+   uvicorn main:app --reload --port=8000 --host=0.0.0.0
+   ```
+10. Änderungen von Host auf PI pushen
     ```
     rsync -av --delete --exclude ~/Dev/aclue-dart-pi/env ~/Dev/aclue-dart-pi/ pi@raspberrypi:~/dev/aclue-dart-pi/
     ```

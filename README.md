@@ -1,16 +1,13 @@
 # aclue-dart-pi
 
 Dieses Projekt stelle eine einfache API bereit um über eine Webcam oder ein Camera Modul ein Bild aufzunehmen.
-Gedacht ist ein Einsatz auf einem RaspberryPi. 
+Gedacht ist ein Einsatz auf einem RaspberryPi.
+
+## Aufsezen des PI
+
+[Hier](Setup.md)
 
 ## Dependencies
-
-### With poetry
-```
-poetry install
-poetry install --extras runtime # falls auf raspberry pi
-poetry shell
-````
 
 ### With `venv`
 
@@ -21,9 +18,9 @@ pip3 install xxx
 
 ```
 
-
 ### OpenCV
-Die aktuelle Version kann aktuell (09.02.2023) nicht installiert werden. Als workaround nutzen wir eine ältere Version.
+
+Die aktuelle Version kann aktuell (09.02.2023) auf einen raspberrypi 3 nicht installiert werden. Als workaround nutzen wir eine ältere Version.
 
 ```
 # this one doesn't work:
@@ -42,14 +39,15 @@ sudo apt-get install libcblas-dev
 sudo apt-get install libhdf5-dev
 sudo apt-get install libhdf5-serial-dev
 sudo apt-get install libatlas-base-dev
-sudo apt-get install libjasper-dev 
-sudo apt-get install libqtgui4 
+sudo apt-get install libjasper-dev
+sudo apt-get install libqtgui4
 sudo apt-get install libqt4-test
 ```
 
 ## Sync code Notebook <=> RaspberryPi
+
 ```
-rsync -av --delete src/ pi@raspberrypi:~/dev/aclue-dart-pi/src/
+rsync -avz --exclude 'env' . pi@raspberrypi:~/develop/aclue-dart-pi
 ```
 
 ## Server starten
@@ -61,8 +59,8 @@ uvicorn main:app --reload --host=0.0.0.0
 => http://localhost:8000/
 ```
 
-
 ## API Latenz messen
+
 ```
 Get Image time:
 curl -o /dev/null -s -w 'Total: %{time_total}s\n' http://raspberrypi:8000/api/imagev2
@@ -71,9 +69,10 @@ curl -o /dev/null -s -w 'Total: %{time_total}s\n' http://raspberrypi:8000/api/im
 # Image capturing
 
 Gibt verschiedene Möglichkeiten:
-1) numpy array -> PIL -> BytesIO buffer
-2) numpy array -> imageio -> BytesIO buffer
-3) numpy array -> pypng.Writer -> BytesIO buffer
+
+1. numpy array -> PIL -> BytesIO buffer
+2. numpy array -> imageio -> BytesIO buffer
+3. numpy array -> pypng.Writer -> BytesIO buffer
 
 Auf einem MacBook Pro dauert es je 1.5s, 5s, 90ms.
 PyPng ist also deutlich schneller. Auf dem RaspberryPi haben wir dadurch die Aufnahmezeit von ~3s auf 400ms-1300ms (720p vs 1080p) reduziert.
