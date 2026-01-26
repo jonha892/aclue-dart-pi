@@ -23,9 +23,9 @@ RINGS = 8 / 170
 def to_coordinates(predictions):
     res = []
     for pred in predictions:
-        xmin, ymin, xmax, ymax, _, _ = pred
+        xmin, ymin, xmax, ymax, p, _ = pred
         center_x, center_y = (xmin + xmax) / 2, (ymin + ymax) / 2
-        res.append((center_x, center_y))
+        res.append((center_x, center_y, p))
     return res
 
 def filter(predictions, class_id):
@@ -165,5 +165,5 @@ def build_score_prediction(dart_pos):
     if dist >= MAX_RADIUS * (CENTER_TO_OUTER_DOUBLE - RINGS) and dist <= MAX_RADIUS * CENTER_TO_OUTER_DOUBLE:
         return score * 2, 'd' + int(score)
     
-    return score
+    return score, str(score)
 

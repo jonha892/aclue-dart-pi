@@ -6,12 +6,14 @@ import json
 import logging, logging.config
 
 import cv2 as cv
+from fastapi.responses import FileResponse
 import numpy as np
 import png
 
 from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 
+import ssl
 
 LOG_CONFIG = {
     "version": 1,
@@ -43,6 +45,8 @@ app = FastAPI()
 origins = [
     "http://localhost",
     "http://localhost:3000",
+    "http://localhost:5173",
+    "https://dartnet-app-dev.web.app",
 ]
 
 app.add_middleware(
@@ -53,7 +57,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
+ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+ssl_context.load_cert_chain('cert.pem', keyfile='key.pem')
 
 camera = None
 #width = 1280
@@ -132,6 +137,23 @@ def take_image():
 
     return flat_arr
 
+def take_image_for_predict():
+    cap.set(3, width)
+    cap.set(4, height)
+    cap.set(5, 30)
+
+    if not cap.isOpened():
+        logger.info("Cannot open camera")
+        exit()
+
+    logger.info("take_image_for_predict")
+    _ret, frame = cap.read()
+    frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
+
+    # Convert the OpenCV image to a PIL image
+    pil_image = Image.fromarray(frame)
+    return pil_image
+
 @app.get("/api/imagev2")
 async def take_image_v2():
     flat_arr = take_image()
@@ -150,7 +172,7 @@ async def take_image_v2():
 
 import load
 import infer
-import torch
+from PIL import Image
 from ultralytics import YOLO
 from torchvision.transforms import v2
 
@@ -165,16 +187,18 @@ yolo_img_width, yolo_img_height = 640, 640
 yolo_size = yolo_img_width, yolo_img_height
 
 crop_window = 450, 350, 1440, 1080
+crop_w, crop_h = crop_window[2] - crop_window[0], crop_window[3] - crop_window[1]
 orig_size = crop_window[2] - crop_window[0], crop_window[3] - crop_window[1]
 
 @app.get("/api/prediction")
 async def prediction():
 
-    #img_tensor = take_image()
+    img_tensor = take_image_for_predict()    
+    img_tensor = img_tensor.crop(crop_window)
+
+
     # random tensor in the shape of the cropped image
-    img_tensor = torch.rand((3, crop_window[2] - crop_window[0], crop_window[3] - crop_window[1]), dtype=torch.float32)
-    
-    logger.info(f'img_tensor shape: {img_tensor.shape}')
+    logger.info(f'img_tensor shape: {img_tensor.size}')
     img_tensor = transforms(img_tensor)
     logger.info(f'after transform img_tensor shape: {img_tensor.shape}')
     img_tensor = img_tensor / 255.0
@@ -182,18 +206,21 @@ async def prediction():
 
     result = model(img_tensor)
     logger.info(f'result len {len(result)}')
+    logger.info(f'result shape {result}')
     predictions = { 'boxes': result[0].boxes.numpy().data.tolist() }
+    logger.info(f'predictions: {predictions}')
 
     resized_predictions = load.translate_yolo_to_crop(predictions, orig_size=orig_size, yolo_size=yolo_size)
 
     anchor_candidates = infer.filter(resized_predictions, class_id=infer.CLASS_ANCHOR)
     anchor_candidates = infer.to_coordinates(anchor_candidates)
+    logger.info(f'anchor_candidates {anchor_candidates}')
     homography_matrix = infer.build_homography_matrix_2(anchor_candidates)
 
     anchors = []
     for candidate in anchor_candidates:
         anchor = infer.translate_position(candidate, homography_matrix)
-        logger.info('anchor', anchor)
+        logger.info(f'anchor {anchor}')
         anchors.append(anchor)
 
     darts = infer.filter(resized_predictions, class_id=infer.CLASS_DART)
@@ -201,11 +228,20 @@ async def prediction():
     result = []
 
     for dart in darts:
-        x, y = dart
+        x, y, p = dart
 
         dart_pos = infer.translate_position((x, y), homography_matrix)
-        score = infer.build_score_prediction(dart_pos)
-        result.append((score, dart_pos))
+        score, desc = infer.build_score_prediction(dart_pos)
+        result.append({
+            'score': score,
+            'desc': desc,
+            'conf': p
+        })
+
+    ###
+    ### save debug info - image with anchors, darts and probabilities
+    ###
+    
 
     return Response(
             content=json.dumps(result), media_type="application/json", headers=headers
